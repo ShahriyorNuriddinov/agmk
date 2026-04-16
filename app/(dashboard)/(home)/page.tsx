@@ -1,5 +1,6 @@
 "use client";
-import { memo } from "react";
+import { memo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { StatsRow } from "@/components/dashboard/StatsRow";
 import { AnnouncementsCard } from "@/components/dashboard/AnnouncementsCard";
 import { TasksCard } from "@/components/dashboard/TasksCard";
@@ -7,7 +8,15 @@ import { TeamActivityCard } from "@/components/dashboard/TeamActivityCard";
 import { useAuth } from "@/hooks/useAuth";
 
 const Page = () => {
+  const router = useRouter();
   const { user } = useAuth();
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      router.replace("/about");
+    }
+  }, [router]);
 
   const fullName = user?.employee
     ? `${user.employee.firstName} ${user.employee.middleName ?? ""}`
