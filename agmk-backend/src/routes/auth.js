@@ -4,7 +4,6 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const { body } = require("express-validator");
 const User = require("../models/User");
-const Employee = require("../models/Employee");
 const validate = require("../middleware/validate");
 const { auth } = require("../middleware/auth");
 
@@ -23,30 +22,29 @@ function createTransporter() {
     });
 }
 
-// Parol bilan kirish
+
 router.post("/login",
     [body("email").isEmail(), body("password").notEmpty()],
     validate,
     async (req, res) => {
         try {
             const { email, password } = req.body;
-            const user = await User.findOne({ email }).populate("employeeId");
+            const user = await User.findOne({ email });
             if (!user || !user.isActive) return res.status(401).json({ success: false, message: "Неверный email или пароль" });
             const match = await user.comparePassword(password);
             if (!match) return res.status(401).json({ success: false, message: "Неверный email или пароль" });
-            const payload = { id: user._id, role: user.role, employeeId: user.employeeId._id };
+            const payload = { id: user._id, role: user.role };
             const accessToken = signAccess(payload);
             const refreshToken = signRefresh(payload);
             user.refreshToken = refreshToken;
             await user.save();
-            res.json({ success: true, accessToken, refreshToken, user: { id: user._id, email: user.email, role: user.role, employee: user.employeeId } });
+            res.json({ success: true, accessToken, refreshToken, user: { id: user._id, email: user.email, role: user.role } });
         } catch (err) {
-            res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
+            res.status(500).json({ success: false, message: err.message });
         }
     }
 );
 
-// OTP kod yuborish — hamma uchun (user yo'q bo'lsa ham)
 router.post("/send-otp",
     [body("email").isEmail()],
     validate,
@@ -73,7 +71,7 @@ router.post("/send-otp",
     }
 );
 
-// OTP kodni tekshirish — hamma uchun (user yo'q bo'lsa avtomatik yaratiladi)
+
 router.post("/verify-otp",
     [body("email").isEmail(), body("code").isLength({ min: 6, max: 6 })],
     validate,
@@ -86,44 +84,31 @@ router.post("/verify-otp",
             if (!savedCode) return res.status(400).json({ success: false, message: "Код не найден. Запросите новый" });
             if (savedCode !== code) return res.status(400).json({ success: false, message: "Неверный код" });
             otpStore.delete(normalEmail);
-
-            // Employee topish yoki yaratish
-            let employee = await Employee.findOne({ email: normalEmail });
-            if (!employee) {
-                employee = await Employee.create({
-                    firstName: normalEmail.split("@")[0],
-                    email: normalEmail,
-                });
-            }
-
-            let user = await
-                let user = await User.findOne({ email: normalEmail });
+            let user = await User.findOne({ email: normalEmail });
             if (!user) {
                 user = await User.create({
                     email: normalEmail,
                     password: crypto.randomBytes(16).toString("hex"),
-                    employeeId: employee._id,
                     role: "employee",
                 });
             }
 
             if (!user.isActive) return res.status(401).json({ success: false, message: "Аккаунт деактивирован" });
 
-            const payload = { id: user._id, role: user.role, employeeId: employee._id };
+            const payload = { id: user._id, role: user.role };
             const accessToken = signAccess(payload);
             const refreshToken = signRefresh(payload);
             user.refreshToken = refreshToken;
             await user.save();
 
-            res.json({ success: true, accessToken, refreshToken, user: { id: user._id, email: user.email, role: user.role, employee } });
+            res.json({ success: true, accessToken, refreshToken, user: { id: user._id, email: user.email, role: user.role } });
         } catch (err) {
             console.error("verify-otp error:", err.message);
-            res.status(500).json({ success: false, message: err.message || "Внутренняя ошибка сервера" });
+            res.status(500).json({ success: false, message: err.message });
         }
     }
 );
 
-// Token yangilash
 router.post("/refresh", async (req, res) => {
     try {
         const { refreshToken } = req.body;
@@ -131,7 +116,7 @@ router.post("/refresh", async (req, res) => {
         const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
         const user = await User.findById(decoded.id);
         if (!user || user.refreshToken !== refreshToken) return res.status(401).json({ success: false, message: "Токен недействителен" });
-        const accessToken = signAccess({ id: user._id, role: user.role, employeeId: user.employeeId });
+        const accessToken = signAccess({ id: user._id, role: user.role });
         res.json({ success: true, accessToken });
     } catch {
         res.status(401).json({ success: false, message: "Токен недействителен" });
@@ -143,13 +128,12 @@ router.post("/logout", auth, async (req, res) => {
     res.json({ success: true });
 });
 
-
 router.get("/me", auth, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).populate("employeeId").select("-password -refreshToken");
+        const user = await User.findById(req.user.id).select("-password -refreshToken");
         res.json({ success: true, data: user });
     } catch (err) {
-        res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
