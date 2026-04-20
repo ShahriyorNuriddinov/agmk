@@ -75,11 +75,10 @@ router.post(
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto;">
                         <h2 style="color: #1a56db;">Ваш код входа</h2>
-                        <p>Используйте этот код для входа в корпоративный портал:</p>
+                        <p>Используйте этот код для входа</p>
                         <div style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1a56db; padding: 16px 0;">
                             ${code}
                         </div>
-                        <p style="color:#666;font-size:13px;">Код одноразовый. Никому не сообщайте его.</p>
                     </div>
                 `,
             });
@@ -131,7 +130,11 @@ router.post(
             if (!user.isActive) {
                 return res.status(401).json({ success: false, message: "Аккаунт деактивирован" });
             }
-            const payload = { id: user._id, role: user.role, employeeId: user.employeeId._id };
+            if (!user.employeeId) {
+                return res.status(500).json({ success: false, message: "Ошибка: сотрудник не найден" });
+            }
+            const employeeId = typeof user.employeeId === "object" ? user.employeeId._id : user.employeeId;
+            const payload = { id: user._id, role: user.role, employeeId };
             const accessToken = signAccess(payload);
             const refreshToken = signRefresh(payload);
             user.refreshToken = refreshToken;
