@@ -25,6 +25,20 @@ router.get("/history", auth, async (req, res) => {
     }
 });
 
+router.post("/", auth, async (req, res) => {
+    try {
+        const { type, allocated, month, year } = req.body;
+        const existing = await FoodVoucher.findOne({ user: req.user.id, type, month, year });
+        if (existing) {
+            return res.status(400).json({ success: false, message: "Талон на этот период уже существует" });
+        }
+        const voucher = await FoodVoucher.create({ user: req.user.id, type, allocated, month, year });
+        res.status(201).json({ success: true, data: voucher });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
+    }
+});
+
 router.post("/transaction", auth, role("admin"), async (req, res) => {
     try {
         const { userId, type, amount, location, description, month, year } = req.body;
