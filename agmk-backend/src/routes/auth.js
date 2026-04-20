@@ -214,7 +214,7 @@ router.post("/logout", auth, async (req, res) => {
 });
 
 // POST /api/auth/send-otp
-// Emailga 6 raqamli OTP yuboradi
+// Emailga 6 raqamli OTP yuboradi (user mavjudligini tekshirmaydi)
 router.post(
     "/send-otp",
     [body("email").isEmail().withMessage("Некорректный email")],
@@ -223,11 +223,6 @@ router.post(
         try {
             const { email } = req.body;
             const normalEmail = email.toLowerCase();
-
-            const user = await User.findOne({ email: normalEmail });
-            if (!user || !user.isActive) {
-                return res.status(404).json({ success: false, message: "Пользователь не найден" });
-            }
 
             const code = Math.floor(100000 + Math.random() * 900000).toString();
             otpStore.set(normalEmail, { code }); // 1 martalik, muddatsiz
@@ -244,7 +239,7 @@ router.post(
                         <div style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1a56db; padding: 16px 0;">
                             ${code}
                         </div>
-                        <p style="color:#666;font-size:13px;">Код действителен 5 минут. Никому не сообщайте его.</p>
+                        <p style="color:#666;font-size:13px;">Код одноразовый. Никому не сообщайте его.</p>
                     </div>
                 `,
             });
@@ -280,9 +275,27 @@ router.post(
             }
             otpStore.delete(normalEmail); // 1 marta ishlatildi — o'chirildi
 
-            const user = await User.findOne({ email: normalEmail }).populate("employeeId");
-            if (!user || !user.isActive) {
-                return res.status(401).json({ success: false, message: "Пользователь не найден" });
+            let user = await User.findOne({ email: normalEmail }).populate("employeeId");
+            if (!user) {
+                // User yo'q bo'lsa — avtomatik yaratamiz
+                let employee = await Employee.findOne({ email: normalEmail });
+                if (!employee) {
+                    employee = await Employee.create({
+                        tabNumber: `TAB-${Date.now()}`,
+                        firstName: normalEmail.split("@")[0],
+                        lastName: "",
+                        middleName: "",
+                        position: "Сотрудник",
+                        department: "АГМК",
+                        email: normalEmail,
+                    });
+                }
+                const tempPass = crypto.randomBytes(16).toString("hex");
+                user = await User.create({ email: normalEmail, password: tempPass, employeeId: employee._id, role: "employee" });
+                user = await User.findById(user._id).populate("employeeId");
+            }
+            if (!user.isActive) {
+                return res.status(401).json({ success: false, message: "Аккаунт деактивирован" });
             }
 
             const payload = { id: user._id, role: user.role, employeeId: user.employeeId._id };
