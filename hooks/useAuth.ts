@@ -5,13 +5,6 @@ interface User {
     id: string;
     email: string;
     role: string;
-    employee: {
-        firstName: string;
-        lastName: string;
-        middleName?: string;
-        position: string;
-        department: string;
-    };
 }
 
 export function useAuth() {
@@ -26,22 +19,8 @@ export function useAuth() {
 
     function logout() {
         localStorage.clear();
-        window.location.href = "/about";
+        window.location.href = "/login";
     }
 
-    const emp = user?.employee;
-
-    const shortName = emp
-        ? `${emp.lastName} ${emp.firstName?.[0] ?? ""}.${emp.middleName?.[0] ?? ""}.`
-        : "";
-
-    const displayName = emp
-        ? `${emp.firstName?.[0] ?? ""}. ${emp.lastName}`
-        : "";
-
-    const initials = emp
-        ? `${emp.lastName?.[0] ?? ""}${emp.firstName?.[0] ?? ""}`
-        : "";
-
-    return { user, shortName, displayName, initials, logout };
+    return { user, logout };
 }

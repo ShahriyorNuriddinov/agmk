@@ -5,11 +5,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Building2, Eye, EyeOff, LogIn, Mail, KeyRound } from "lucide-react";
 import { useState } from "react";
-import { useLogin } from "@/hooks/useLogin";
-import axios from "axios";
 import { useRouter } from "next/navigation";
-
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+import { useLogin } from "@/hooks/useLogin";
+import { useSendOtp } from "@/hooks/useSendOtp";
+import { useVerifyOtp } from "@/hooks/useVerifyOtp";
+import { useSetPassword } from "@/hooks/useSetPassword";
+import toast from "react-hot-toast";
 
 const passSchema = z.object({
     email: z.string().email("Некорректный email"),
@@ -38,64 +39,56 @@ export default function LoginPage() {
     const [showPass, setShowPass] = useState(false);
     const [otpStep, setOtpStep] = useState<"email" | "code" | "setpass">("email");
     const [otpEmail, setOtpEmail] = useState("");
-    const [otpLoading, setOtpLoading] = useState(false);
-    const [otpError, setOtpError] = useState("");
     const [otpAccessToken, setOtpAccessToken] = useState("");
-    const { mutate, isPending } = useLogin();
+
     const router = useRouter();
+    const { mutate: login, isPending: loginPending } = useLogin();
+    const sendOtp = useSendOtp();
+    const verifyOtp = useVerifyOtp();
+    const setPassword = useSetPassword();
 
     const passForm = useForm<PassForm>({ resolver: zodResolver(passSchema) });
     const emailForm = useForm<EmailForm>({ resolver: zodResolver(emailSchema) });
     const codeForm = useForm<CodeForm>({ resolver: zodResolver(codeSchema) });
     const setPassForm = useForm<SetPassForm>({ resolver: zodResolver(setPassSchema) });
 
-    async function sendOtp(data: EmailForm) {
-        setOtpLoading(true);
-        setOtpError("");
-        try {
-            await axios.post(`${API}/auth/send-otp`, { email: data.email });
-            setOtpEmail(data.email);
-            setOtpStep("code");
-        } catch (e: unknown) {
-            const msg = axios.isAxiosError(e) ? e.response?.data?.message : "Ошибка";
-            setOtpError(msg || "Ошибка при отправке кода");
-        } finally {
-            setOtpLoading(false);
-        }
+    function handleSendOtp(data: EmailForm) {
+        sendOtp.mutate(data.email, {
+            onSuccess: () => {
+                setOtpEmail(data.email);
+                setOtpStep("code");
+            },
+            onError: (e: any) => {
+                toast.error(e?.response?.data?.message || "Ошибка при отправке кода");
+            },
+        });
     }
 
-    async function verifyOtp(data: CodeForm) {
-        setOtpLoading(true);
-        setOtpError("");
-        try {
-            const res = await axios.post(`${API}/auth/verify-otp`, { email: otpEmail, code: data.code });
-            setOtpAccessToken(res.data.accessToken);
-            localStorage.setItem("refreshToken", res.data.refreshToken);
-            localStorage.setItem("user", JSON.stringify(res.data.user));
-            setOtpStep("setpass");
-        } catch (e: unknown) {
-            const msg = axios.isAxiosError(e) ? e.response?.data?.message : "Ошибка";
-            setOtpError(msg || "Неверный код");
-        } finally {
-            setOtpLoading(false);
-        }
+    function handleVerifyOtp(data: CodeForm) {
+        verifyOtp.mutate({ email: otpEmail, code: data.code }, {
+            onSuccess: (res) => {
+                setOtpAccessToken(res.accessToken);
+                localStorage.setItem("refreshToken", res.refreshToken);
+                localStorage.setItem("user", JSON.stringify(res.user));
+                setOtpStep("setpass");
+            },
+            onError: (e: any) => {
+                toast.error(e?.response?.data?.message || "Неверный код");
+            },
+        });
     }
 
-    async function savePassword(data: SetPassForm) {
-        setOtpLoading(true);
-        setOtpError("");
-        try {
-            await axios.post(`${API}/auth/set-password`, { password: data.password }, {
-                headers: { Authorization: `Bearer ${otpAccessToken}` },
-            });
-            localStorage.setItem("accessToken", otpAccessToken);
-            router.push("/");
-        } catch (e: unknown) {
-            const msg = axios.isAxiosError(e) ? e.response?.data?.message : "Ошибка";
-            setOtpError(msg || "Ошибка при сохранении пароля");
-        } finally {
-            setOtpLoading(false);
-        }
+    function handleSetPassword(data: SetPassForm) {
+        localStorage.setItem("accessToken", otpAccessToken);
+        setPassword.mutate(data.password, {
+            onSuccess: () => {
+                toast.success("Пароль установлен");
+                router.push("/");
+            },
+            onError: (e: any) => {
+                toast.error(e?.response?.data?.message || "Ошибка при сохранении пароля");
+            },
+        });
     }
 
     return (
@@ -120,14 +113,14 @@ export default function LoginPage() {
                             className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors ${tab === "password" ? "bg-primary text-white" : "text-muted-foreground hover:bg-accent"}`}>
                             <KeyRound className="h-4 w-4" /> Пароль
                         </button>
-                        <button type="button" onClick={() => { setTab("otp"); setOtpStep("email"); setOtpError(""); }}
+                        <button type="button" onClick={() => { setTab("otp"); setOtpStep("email"); }}
                             className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors ${tab === "otp" ? "bg-primary text-white" : "text-muted-foreground hover:bg-accent"}`}>
                             <Mail className="h-4 w-4" /> Код на email
                         </button>
                     </div>
 
                     {tab === "password" && (
-                        <form onSubmit={passForm.handleSubmit((d) => mutate(d))} className="space-y-4">
+                        <form onSubmit={passForm.handleSubmit((d) => login(d))} className="space-y-4">
                             <div>
                                 <label className="text-sm font-medium block mb-1.5" htmlFor="email">Email</label>
                                 <input id="email" type="email" placeholder="i.ivanov@agmk.uz"
@@ -148,16 +141,16 @@ export default function LoginPage() {
                                 </div>
                                 {passForm.formState.errors.password && <p className="text-xs text-destructive mt-1">{passForm.formState.errors.password.message}</p>}
                             </div>
-                            <button type="submit" disabled={isPending}
+                            <button type="submit" disabled={loginPending}
                                 className="w-full bg-primary text-primary-foreground rounded-md h-10 text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-60">
-                                {isPending ? <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <LogIn className="h-4 w-4" />}
-                                {isPending ? "Входим..." : "Войти"}
+                                {loginPending ? <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <LogIn className="h-4 w-4" />}
+                                {loginPending ? "Входим..." : "Войти"}
                             </button>
                         </form>
                     )}
 
                     {tab === "otp" && otpStep === "email" && (
-                        <form onSubmit={emailForm.handleSubmit(sendOtp)} className="space-y-4">
+                        <form onSubmit={emailForm.handleSubmit(handleSendOtp)} className="space-y-4">
                             <div>
                                 <label className="text-sm font-medium block mb-1.5" htmlFor="otp-email">Email</label>
                                 <input id="otp-email" type="email" placeholder="i.ivanov@agmk.uz"
@@ -165,17 +158,16 @@ export default function LoginPage() {
                                     className="w-full border rounded-md px-3 h-10 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition" />
                                 {emailForm.formState.errors.email && <p className="text-xs text-destructive mt-1">{emailForm.formState.errors.email.message}</p>}
                             </div>
-                            {otpError && <p className="text-xs text-destructive">{otpError}</p>}
-                            <button type="submit" disabled={otpLoading}
+                            <button type="submit" disabled={sendOtp.isPending}
                                 className="w-full bg-primary text-primary-foreground rounded-md h-10 text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-60">
-                                {otpLoading ? <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <Mail className="h-4 w-4" />}
-                                {otpLoading ? "Отправляем..." : "Получить код"}
+                                {sendOtp.isPending ? <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <Mail className="h-4 w-4" />}
+                                {sendOtp.isPending ? "Отправляем..." : "Получить код"}
                             </button>
                         </form>
                     )}
 
                     {tab === "otp" && otpStep === "code" && (
-                        <form onSubmit={codeForm.handleSubmit(verifyOtp)} className="space-y-4">
+                        <form onSubmit={codeForm.handleSubmit(handleVerifyOtp)} className="space-y-4">
                             <p className="text-sm text-muted-foreground">
                                 Код отправлен на <span className="font-medium text-foreground">{otpEmail}</span>
                             </p>
@@ -186,13 +178,12 @@ export default function LoginPage() {
                                     className="w-full border rounded-md px-3 h-10 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition tracking-widest text-center font-mono text-lg" />
                                 {codeForm.formState.errors.code && <p className="text-xs text-destructive mt-1">{codeForm.formState.errors.code.message}</p>}
                             </div>
-                            {otpError && <p className="text-xs text-destructive">{otpError}</p>}
-                            <button type="submit" disabled={otpLoading}
+                            <button type="submit" disabled={verifyOtp.isPending}
                                 className="w-full bg-primary text-primary-foreground rounded-md h-10 text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-60">
-                                {otpLoading ? <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <LogIn className="h-4 w-4" />}
-                                {otpLoading ? "Проверяем..." : "Далее"}
+                                {verifyOtp.isPending ? <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <LogIn className="h-4 w-4" />}
+                                {verifyOtp.isPending ? "Проверяем..." : "Далее"}
                             </button>
-                            <button type="button" onClick={() => { setOtpStep("email"); setOtpError(""); codeForm.reset(); }}
+                            <button type="button" onClick={() => { setOtpStep("email"); codeForm.reset(); }}
                                 className="w-full text-sm text-muted-foreground hover:text-foreground">
                                 ← Изменить email
                             </button>
@@ -200,7 +191,7 @@ export default function LoginPage() {
                     )}
 
                     {tab === "otp" && otpStep === "setpass" && (
-                        <form onSubmit={setPassForm.handleSubmit(savePassword)} className="space-y-4">
+                        <form onSubmit={setPassForm.handleSubmit(handleSetPassword)} className="space-y-4">
                             <p className="text-sm text-muted-foreground">Установите пароль для входа</p>
                             <div>
                                 <label className="text-sm font-medium block mb-1.5" htmlFor="new-pass">Пароль</label>
@@ -216,11 +207,10 @@ export default function LoginPage() {
                                     className="w-full border rounded-md px-3 h-10 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition" />
                                 {setPassForm.formState.errors.confirm && <p className="text-xs text-destructive mt-1">{setPassForm.formState.errors.confirm.message}</p>}
                             </div>
-                            {otpError && <p className="text-xs text-destructive">{otpError}</p>}
-                            <button type="submit" disabled={otpLoading}
+                            <button type="submit" disabled={setPassword.isPending}
                                 className="w-full bg-primary text-primary-foreground rounded-md h-10 text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-60">
-                                {otpLoading ? <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <LogIn className="h-4 w-4" />}
-                                {otpLoading ? "Сохраняем..." : "Войти"}
+                                {setPassword.isPending ? <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <LogIn className="h-4 w-4" />}
+                                {setPassword.isPending ? "Сохраняем..." : "Войти"}
                             </button>
                         </form>
                     )}
