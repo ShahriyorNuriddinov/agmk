@@ -18,18 +18,12 @@ const Page = () => {
     }
   }, [router]);
 
-  const fullName = user?.employee
-    ? `${user.employee.firstName} ${user.employee.middleName ?? ""}`
-    : "—";
-
-  const position = user?.employee?.position ?? "—";
-  const department = user?.employee?.department ?? "—";
+  const fullName = user?.email ?? "—";
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Добро пожаловать, {fullName}!</h1>
-        <p className="text-muted-foreground">{position}, {department}</p>
       </div>
       <StatsRow />
       <div className="grid lg:grid-cols-3 gap-6">
