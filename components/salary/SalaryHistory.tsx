@@ -10,13 +10,11 @@ import {
 function monthName(month: number, year: number) {
     return new Date(year, month - 1, 1).toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
 }
-
 export function SalaryHistory() {
     const { data, isLoading } = useQuery({
         queryKey: ["salary-history"],
         queryFn: salaryApi.getHistory,
     });
-
     const salaries: any[] = data?.data ?? [];
 
     if (isLoading) return <div className="text-center py-10 text-muted-foreground">Загрузка...</div>;

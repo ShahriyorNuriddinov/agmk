@@ -9,6 +9,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { authApi } from "@/api/auth";
 import toast from "react-hot-toast";
 
+
 const schema = z.object({
     password: z.string().min(6, "Пароль должен содержать минимум 6 символов"),
     confirmPassword: z.string(),
