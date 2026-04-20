@@ -15,7 +15,7 @@ const links = [
 ];
 
 const Header = () => {
-  const { shortName, logout } = useAuth();
+  const { user, logout } = useAuth();
 
   return (
     <header className="w-full h-14 bg-white border-b border-slate-200 shrink-0 z-50 px-5 flex items-center justify-between">
@@ -36,7 +36,7 @@ const Header = () => {
       <div className="hidden lg:flex items-center space-x-3">
         <div className="flex items-center space-x-2">
           <User className="h-4 w-4" aria-hidden />
-          <span className="text-sm">{shortName || "—"}</span>
+          <span className="text-sm">{user?.email || "—"}</span>
         </div>
         <Button variant="outline" size="sm" onClick={logout}>
           Выход
@@ -58,7 +58,7 @@ const Header = () => {
             ))}
             <div className="flex items-center space-x-2 pt-2 border-t">
               <User className="h-4 w-4" aria-hidden />
-              <span className="text-sm">{shortName || "—"}</span>
+              <span className="text-sm">{user?.email || "—"}</span>
             </div>
             <Button variant="outline" size="sm" onClick={logout}>
               Выход

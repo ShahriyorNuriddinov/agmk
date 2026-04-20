@@ -66,7 +66,7 @@ const navItems: Item[] = [
 
 const AppSidebar = () => {
   const pathname = usePathname();
-  const { displayName, initials, user } = useAuth();
+  const { user } = useAuth();
 
   const defaultOpen = navItems.reduce<Record<string, boolean>>((acc, item) => {
     if (item.children.some((c) => pathname.startsWith(c.href) && c.href !== "/")) acc[item.label] = true;
@@ -81,11 +81,11 @@ const AppSidebar = () => {
       <div className="p-4 border-b">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 text-sm font-bold">
-            {initials || <User className="h-5 w-5" />}
+            {user?.email?.[0]?.toUpperCase() || <User className="h-5 w-5" />}
           </div>
           <div>
-            <p className="font-medium text-sm">{displayName || "—"}</p>
-            <p className="text-xs text-muted-foreground">{user?.employee?.position || "—"}</p>
+            <p className="font-medium text-sm">{user?.email || "—"}</p>
+            <p className="text-xs text-muted-foreground">{user?.role || "—"}</p>
           </div>
         </div>
       </div>
