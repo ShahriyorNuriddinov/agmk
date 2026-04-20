@@ -5,14 +5,6 @@ export interface LoginInput {
     password: string;
 }
 
-export interface RegisterInput {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    middleName?: string;
-}
-
 export interface AuthResponse {
     success: boolean;
     accessToken: string;
@@ -37,8 +29,18 @@ export const authApi = {
         return res.data;
     },
 
-    register: async (data: RegisterInput): Promise<AuthResponse> => {
-        const res = await api.post("/auth/register", data);
+    requestAccess: async (email: string): Promise<{ success: boolean; message: string }> => {
+        const res = await api.post("/auth/request-access", { email });
+        return res.data;
+    },
+
+    verifyToken: async (token: string): Promise<{ success: boolean; email: string }> => {
+        const res = await api.get(`/auth/verify-token?token=${token}`);
+        return res.data;
+    },
+
+    setPassword: async (token: string, password: string): Promise<AuthResponse> => {
+        const res = await api.post("/auth/set-password", { token, password });
         return res.data;
     },
 

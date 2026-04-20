@@ -96,9 +96,9 @@ export default function LoginPage() {
                     </form>
 
                     <p className="text-sm text-center text-muted-foreground mt-6">
-                        Нет аккаунта?{" "}
-                        <Link href="/register" className="text-primary font-medium hover:underline">
-                            Зарегистрироваться
+                        Нет доступа?{" "}
+                        <Link href="/request-access" className="text-primary font-medium hover:underline">
+                            Запросить доступ
                         </Link>
                     </p>
                 </div>
