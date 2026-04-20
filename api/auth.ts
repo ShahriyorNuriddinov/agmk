@@ -1,10 +1,5 @@
 import api from "@/lib/axios";
 
-export interface LoginInput {
-    email: string;
-    password: string;
-}
-
 export interface AuthResponse {
     success: boolean;
     accessToken: string;
@@ -24,23 +19,18 @@ export interface AuthResponse {
 }
 
 export const authApi = {
-    login: async (data: LoginInput): Promise<AuthResponse> => {
-        const res = await api.post("/auth/login", data);
+    login: async (email: string, password: string): Promise<AuthResponse> => {
+        const res = await api.post("/auth/login", { email, password });
         return res.data;
     },
 
-    requestAccess: async (email: string): Promise<{ success: boolean; message: string }> => {
-        const res = await api.post("/auth/request-access", { email });
+    sendOtp: async (email: string): Promise<{ success: boolean; message: string }> => {
+        const res = await api.post("/auth/send-otp", { email });
         return res.data;
     },
 
-    verifyToken: async (token: string): Promise<{ success: boolean; email: string }> => {
-        const res = await api.get(`/auth/verify-token?token=${token}`);
-        return res.data;
-    },
-
-    setPassword: async (token: string, password: string): Promise<AuthResponse> => {
-        const res = await api.post("/auth/set-password", { token, password });
+    verifyOtp: async (email: string, code: string): Promise<AuthResponse> => {
+        const res = await api.post("/auth/verify-otp", { email, code });
         return res.data;
     },
 
