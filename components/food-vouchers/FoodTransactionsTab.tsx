@@ -6,6 +6,17 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
+type TxRow = {
+    date: string;
+    time: string;
+    type: string;
+    typeCls: string;
+    category: string;
+    place: string;
+    amount: string;
+    ts: number;
+};
+
 export function FoodTransactionsTab() {
     const { data, isLoading } = useQuery({
         queryKey: ["food-vouchers-history"],
@@ -13,20 +24,28 @@ export function FoodTransactionsTab() {
     });
 
     const vouchers: any[] = data?.data ?? [];
-    const 
-    const transactions = vouchers.flatMap((v) =>
-        (v.transactions ?? []).map((t: any) => ({
-            date: new Date(t.date).toLocaleDateString("ru-RU"),
-            time: new Date(t.date).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }),
-            type: v.type,
-            typeCls: v.type === "LPP" ? "text-blue-600 border-blue-600" : "text-green-600 border-green-600",
-            category: t.description ?? "—",
-            place: t.location ?? "—",
-            amount: `-${t.amount.toLocaleString()} сум`,
-        }))
-    ).sort((a, b) => b.date.localeCompare(a.date));
 
-    if (isLoading) return <div className="text-center py-10 text-muted-foreground">Загрузка...</div>;
+    const rows: TxRow[] = [];
+    for (const v of vouchers) {
+        for (const t of v.transactions ?? []) {
+            const d = new Date(t.date);
+            rows.push({
+                ts: d.getTime(),
+                date: d.toLocaleDateString("ru-RU"),
+                time: d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }),
+                type: v.type,
+                typeCls: v.type === "LPP" ? "text-blue-600 border-blue-600" : "text-green-600 border-green-600",
+                category: t.description ?? "—",
+                place: t.location ?? "—",
+                amount: `-${t.amount.toLocaleString()} сум`,
+            });
+        }
+    }
+    rows.sort((a, b) => b.ts - a.ts);
+
+    if (isLoading) {
+        return <div className="text-center py-10 text-muted-foreground">Загрузка...</div>;
+    }
 
     return (
         <div className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border">
@@ -35,7 +54,7 @@ export function FoodTransactionsTab() {
                 <p className="text-sm text-muted-foreground mt-1">Последние операции по талонам питания</p>
             </div>
             <div className="px-6 pb-6 -mt-2">
-                {transactions.length === 0 ? (
+                {rows.length === 0 ? (
                     <p className="text-center text-muted-foreground py-6">Транзакции не найдены</p>
                 ) : (
                     <Table>
@@ -49,7 +68,7 @@ export function FoodTransactionsTab() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {transactions.map((t, i) => (
+                            {rows.map((t, i) => (
                                 <TableRow key={i}>
                                     <TableCell>
                                         <div className="font-medium">{t.date}</div>
