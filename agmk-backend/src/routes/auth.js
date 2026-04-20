@@ -22,6 +22,8 @@ function createTransporter() {
     });
 }
 
+
+
 router.post("/login",
     [body("email").isEmail(), body("password").notEmpty()],
     validate,
@@ -42,6 +44,8 @@ router.post("/login",
         }
     }
 );
+
+
 
 router.post("/send-otp",
     [body("email").isEmail()],
@@ -68,6 +72,8 @@ router.post("/send-otp",
         }
     }
 );
+
+
 
 router.post("/verify-otp",
     [body("email").isEmail(), body("code").isLength({ min: 6, max: 6 })],
@@ -114,6 +120,8 @@ router.post("/verify-otp",
     }
 );
 
+
+
 router.post("/set-password",
     [body("password").isLength({ min: 6 }).withMessage("Минимум 6 символов")],
     validate,
@@ -130,6 +138,8 @@ router.post("/set-password",
     }
 );
 
+
+
 router.post("/refresh", async (req, res) => {
     try {
         const { refreshToken } = req.body;
@@ -144,10 +154,12 @@ router.post("/refresh", async (req, res) => {
     }
 });
 
+
 router.post("/logout", auth, async (req, res) => {
     await User.findByIdAndUpdate(req.user.id, { refreshToken: null });
     res.json({ success: true });
 });
+
 
 router.get("/me", auth, async (req, res) => {
     try {

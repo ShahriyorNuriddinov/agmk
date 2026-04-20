@@ -1,5 +1,4 @@
 import api from "@/lib/axios";
-import { AsyncResource } from "async_hooks";
 
 export interface LoginInput {
     email: string;
@@ -14,15 +13,9 @@ export interface AuthResponse {
         id: string;
         email: string;
         role: string;
-        employee: {
-            firstName: string;
-            lastName: string;
-            middleName?: string;
-            position: string;
-            department: string;
-        };
     };
 }
+
 export const authApi = {
     login: async (data: LoginInput): Promise<AuthResponse> => {
         const res = await api.post("/auth/login", data);

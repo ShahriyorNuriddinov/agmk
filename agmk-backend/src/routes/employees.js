@@ -3,6 +3,8 @@ const Employee = require("../models/Employee");
 const { auth, role } = require("../middleware/auth");
 
 
+
+
 router.get("/", auth, async (req, res) => {
     try {
         const { search, department, page = 1, limit = 20 } = req.query;
@@ -31,6 +33,7 @@ router.get("/", auth, async (req, res) => {
         res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
     }
 });
+
 
 
 

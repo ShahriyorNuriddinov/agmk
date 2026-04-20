@@ -22,7 +22,7 @@ router.get("/all", auth, role("admin"), async (req, res) => {
 
         const total = await SupportTicket.countDocuments(query);
         const tickets = await SupportTicket.find(query)
-            .populate("user", "email employeeId")
+            .populate("user", "email")
             .populate("executor", "email")
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)

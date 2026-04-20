@@ -1,14 +1,12 @@
 const router = require("express").Router();
 const Salary = require("../models/Salary");
-const User = require("../models/User");
 const { auth, role } = require("../middleware/auth");
 
 
 
 router.get("/me", auth, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
-        const salaries = await Salary.find({ employee: user.employeeId }).sort({ year: -1, month: -1 });
+        const salaries = await Salary.find({ employee: req.user.id }).sort({ year: -1, month: -1 });
         res.json({ success: true, data: salaries });
     } catch (err) {
         res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
@@ -21,9 +19,8 @@ router.get("/me", auth, async (req, res) => {
 router.get("/me/current", auth, async (req, res) => {
     try {
         const now = new Date();
-        const user = await User.findById(req.user.id);
         const salary = await Salary.findOne({
-            employee: user.employeeId,
+            employee: req.user.id,
             month: now.getMonth() + 1,
             year: now.getFullYear(),
         });

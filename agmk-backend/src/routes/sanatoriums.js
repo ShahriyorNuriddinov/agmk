@@ -16,7 +16,7 @@ router.get("/", auth, async (req, res) => {
 router.get("/all", auth, role("hr", "manager", "admin"), async (req, res) => {
     try {
         const apps = await SanatoriumApplication.find()
-            .populate("user", "email employeeId")
+            .populate("user", "email")
             .sort({ createdAt: -1 });
         res.json({ success: true, data: apps });
     } catch (err) {

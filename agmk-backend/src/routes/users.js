@@ -6,7 +6,7 @@ const { auth, role } = require("../middleware/auth");
 
 router.get("/", auth, role("admin"), async (req, res) => {
     try {
-        const users = await User.find().populate("employeeId").select("-password -refreshToken");
+        const users = await User.find().select("-password -refreshToken");
         res.json({ success: true, data: users });
     } catch (err) {
         res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
