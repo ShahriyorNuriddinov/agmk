@@ -2,6 +2,7 @@ const router = require("express").Router();
 const Employee = require("../models/Employee");
 const { auth, role } = require("../middleware/auth");
 
+
 router.get("/", auth, async (req, res) => {
     try {
         const { search, department, page = 1, limit = 20 } = req.query;
@@ -31,6 +32,9 @@ router.get("/", auth, async (req, res) => {
     }
 });
 
+
+
+
 router.get("/:id", auth, async (req, res) => {
     try {
         const emp = await Employee.findById(req.params.id);
@@ -40,6 +44,10 @@ router.get("/:id", auth, async (req, res) => {
         res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
     }
 });
+
+
+
+
 router.post("/", auth, role("hr", "admin"), async (req, res) => {
     try {
         const emp = await Employee.create(req.body);
@@ -49,6 +57,9 @@ router.post("/", auth, role("hr", "admin"), async (req, res) => {
     }
 });
 
+
+
+
 router.put("/:id", auth, role("hr", "admin"), async (req, res) => {
     try {
         const emp = await Employee.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -57,6 +68,9 @@ router.put("/:id", auth, role("hr", "admin"), async (req, res) => {
         res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
     }
 });
+
+
+
 
 router.delete("/:id", auth, role("admin"), async (req, res) => {
     try {

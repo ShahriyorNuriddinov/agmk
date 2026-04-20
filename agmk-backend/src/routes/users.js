@@ -2,6 +2,8 @@ const router = require("express").Router();
 const User = require("../models/User");
 const { auth, role } = require("../middleware/auth");
 
+
+
 router.get("/", auth, role("admin"), async (req, res) => {
     try {
         const users = await User.find().populate("employeeId").select("-password -refreshToken");
@@ -10,6 +12,9 @@ router.get("/", auth, role("admin"), async (req, res) => {
         res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
     }
 });
+
+
+
 
 router.put("/:id/role", auth, role("admin"), async (req, res) => {
     try {
@@ -23,6 +28,9 @@ router.put("/:id/role", auth, role("admin"), async (req, res) => {
         res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
     }
 });
+
+
+
 
 router.put("/:id/deactivate", auth, role("admin"), async (req, res) => {
     try {

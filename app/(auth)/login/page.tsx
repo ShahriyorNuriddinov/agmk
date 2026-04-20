@@ -27,19 +27,26 @@ const codeSchema = z.object({
 });
 type CodeForm = z.infer<typeof codeSchema>;
 
+const setPassSchema = z.object({
+    password: z.string().min(6, "Минимум 6 символов"),
+});
+type SetPassForm = z.infer<typeof setPassSchema>;
+
 export default function LoginPage() {
     const [tab, setTab] = useState<"password" | "otp">("password");
     const [showPass, setShowPass] = useState(false);
-    const [otpStep, setOtpStep] = useState<"email" | "code">("email");
+    const [otpStep, setOtpStep] = useState<"email" | "code" | "setpass">("email");
     const [otpEmail, setOtpEmail] = useState("");
     const [otpLoading, setOtpLoading] = useState(false);
     const [otpError, setOtpError] = useState("");
+    const [otpTokens, setOtpTokens] = useState<{ accessToken: string; refreshToken: string } | null>(null);
     const { mutate, isPending } = useLogin();
     const router = useRouter();
 
     const passForm = useForm<PassForm>({ resolver: zodResolver(passSchema) });
     const emailForm = useForm<EmailForm>({ resolver: zodResolver(emailSchema) });
     const codeForm = useForm<CodeForm>({ resolver: zodResolver(codeSchema) });
+    const setPassForm = useForm<SetPassForm>({ resolver: zodResolver(setPassSchema) });
 
     async function sendOtp(data: EmailForm) {
         setOtpLoading(true);
@@ -61,14 +68,35 @@ export default function LoginPage() {
         setOtpError("");
         try {
             const res = await axios.post(`${API}/auth/verify-otp`, { email: otpEmail, code: data.code });
-            const { accessToken, refreshToken, user } = res.data;
+            const { accessToken, refreshToken, user, needsPassword } = res.data;
             localStorage.setItem("accessToken", accessToken);
             localStorage.setItem("refreshToken", refreshToken);
             localStorage.setItem("user", JSON.stringify(user));
-            router.push("/");
+            if (needsPassword) {
+                setOtpTokens({ accessToken, refreshToken });
+                setOtpStep("setpass");
+            } else {
+                router.push("/");
+            }
         } catch (e: unknown) {
             const msg = axios.isAxiosError(e) ? e.response?.data?.message : "Ошибка";
             setOtpError(msg || "Неверный код");
+        } finally {
+            setOtpLoading(false);
+        }
+    }
+
+    async function savePassword(data: SetPassForm) {
+        setOtpLoading(true);
+        setOtpError("");
+        try {
+            await axios.post(`${API}/auth/set-password`, { password: data.password }, {
+                headers: { Authorization: `Bearer ${otpTokens?.accessToken}` },
+            });
+            router.push("/");
+        } catch (e: unknown) {
+            const msg = axios.isAxiosError(e) ? e.response?.data?.message : "Ошибка";
+            setOtpError(msg || "Ошибка при сохранении пароля");
         } finally {
             setOtpLoading(false);
         }
@@ -150,29 +178,47 @@ export default function LoginPage() {
                         </form>
                     )}
 
-                    {tab === "otp" && otpStep === "code" && (
-                        <form onSubmit={codeForm.handleSubmit(verifyOtp)} className="space-y-4">
-                            <p className="text-sm text-muted-foreground">
-                                Код отправлен на <span className="font-medium text-foreground">{otpEmail}</span>
-                            </p>
+                    {tab === "otp" && otpStep === "setpass" && (
+                        <form onSubmit={setPassForm.handleSubmit(savePassword)} className="space-y-4">
+                            <p className="text-sm text-muted-foreground">Придумайте пароль для входа в следующий раз</p>
                             <div>
-                                <label className="text-sm font-medium block mb-1.5" htmlFor="otp-code">Код из письма</label>
-                                <input id="otp-code" type="text" inputMode="numeric" maxLength={6} placeholder="123456"
-                                    {...codeForm.register("code")}
-                                    className="w-full border rounded-md px-3 h-10 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition tracking-widest text-center font-mono text-lg" />
-                                {codeForm.formState.errors.code && <p className="text-xs text-destructive mt-1">{codeForm.formState.errors.code.message}</p>}
+                                <label className="text-sm font-medium block mb-1.5" htmlFor="new-password">Новый пароль</label>
+                                <input id="new-password" type="password" placeholder="Минимум 6 символов"
+                                    {...setPassForm.register("password")}
+                                    className="w-full border rounded-md px-3 h-10 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition" />
+                                {setPassForm.formState.errors.password && <p className="text-xs text-destructive mt-1">{setPassForm.formState.errors.password.message}</p>}
                             </div>
                             {otpError && <p className="text-xs text-destructive">{otpError}</p>}
                             <button type="submit" disabled={otpLoading}
                                 className="w-full bg-primary text-primary-foreground rounded-md h-10 text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-60">
                                 {otpLoading ? <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <LogIn className="h-4 w-4" />}
-                                {otpLoading ? "Проверяем..." : "Войти"}
-                            </button>
-                            <button type="button" onClick={() => { setOtpStep("email"); setOtpError(""); codeForm.reset(); }}
-                                className="w-full text-sm text-muted-foreground hover:text-foreground">
-                                ← Изменить email
+                                {otpLoading ? "Сохраняем..." : "Сохранить и войти"}
                             </button>
                         </form>
+                    )}
+
+                    {tab === "otp" && otpStep === "code" && (<form onSubmit={codeForm.handleSubmit(verifyOtp)} className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            Код отправлен на <span className="font-medium text-foreground">{otpEmail}</span>
+                        </p>
+                        <div>
+                            <label className="text-sm font-medium block mb-1.5" htmlFor="otp-code">Код из письма</label>
+                            <input id="otp-code" type="text" inputMode="numeric" maxLength={6} placeholder="123456"
+                                {...codeForm.register("code")}
+                                className="w-full border rounded-md px-3 h-10 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition tracking-widest text-center font-mono text-lg" />
+                            {codeForm.formState.errors.code && <p className="text-xs text-destructive mt-1">{codeForm.formState.errors.code.message}</p>}
+                        </div>
+                        {otpError && <p className="text-xs text-destructive">{otpError}</p>}
+                        <button type="submit" disabled={otpLoading}
+                            className="w-full bg-primary text-primary-foreground rounded-md h-10 text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-60">
+                            {otpLoading ? <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <LogIn className="h-4 w-4" />}
+                            {otpLoading ? "Проверяем..." : "Войти"}
+                        </button>
+                        <button type="button" onClick={() => { setOtpStep("email"); setOtpError(""); codeForm.reset(); }}
+                            className="w-full text-sm text-muted-foreground hover:text-foreground">
+                            ← Изменить email
+                        </button>
+                    </form>
                     )}
                 </div>
 

@@ -16,6 +16,9 @@ router.get("/", auth, async (req, res) => {
     }
 });
 
+
+
+
 router.get("/history", auth, async (req, res) => {
     try {
         const vouchers = await FoodVoucher.find({ user: req.user.id }).sort({ year: -1, month: -1 });
@@ -24,6 +27,9 @@ router.get("/history", auth, async (req, res) => {
         res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
     }
 });
+
+
+
 
 router.post("/", auth, async (req, res) => {
     try {
@@ -38,6 +44,9 @@ router.post("/", auth, async (req, res) => {
         res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
     }
 });
+
+
+
 
 router.post("/transaction", auth, role("admin"), async (req, res) => {
     try {

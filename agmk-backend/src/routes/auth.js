@@ -22,7 +22,6 @@ function createTransporter() {
     });
 }
 
-
 router.post("/login",
     [body("email").isEmail(), body("password").notEmpty()],
     validate,
@@ -33,9 +32,8 @@ router.post("/login",
             if (!user || !user.isActive) return res.status(401).json({ success: false, message: "Неверный email или пароль" });
             const match = await user.comparePassword(password);
             if (!match) return res.status(401).json({ success: false, message: "Неверный email или пароль" });
-            const payload = { id: user._id, role: user.role };
-            const accessToken = signAccess(payload);
-            const refreshToken = signRefresh(payload);
+            const accessToken = signAccess({ id: user._id, role: user.role });
+            const refreshToken = signRefresh({ id: user._id, role: user.role });
             user.refreshToken = refreshToken;
             await user.save();
             res.json({ success: true, accessToken, refreshToken, user: { id: user._id, email: user.email, role: user.role } });
@@ -71,7 +69,6 @@ router.post("/send-otp",
     }
 );
 
-
 router.post("/verify-otp",
     [body("email").isEmail(), body("code").isLength({ min: 6, max: 6 })],
     validate,
@@ -84,8 +81,11 @@ router.post("/verify-otp",
             if (!savedCode) return res.status(400).json({ success: false, message: "Код не найден. Запросите новый" });
             if (savedCode !== code) return res.status(400).json({ success: false, message: "Неверный код" });
             otpStore.delete(normalEmail);
+
+            let isNew = false;
             let user = await User.findOne({ email: normalEmail });
             if (!user) {
+                isNew = true;
                 user = await User.create({
                     email: normalEmail,
                     password: crypto.randomBytes(16).toString("hex"),
@@ -95,15 +95,36 @@ router.post("/verify-otp",
 
             if (!user.isActive) return res.status(401).json({ success: false, message: "Аккаунт деактивирован" });
 
-            const payload = { id: user._id, role: user.role };
-            const accessToken = signAccess(payload);
-            const refreshToken = signRefresh(payload);
+            const accessToken = signAccess({ id: user._id, role: user.role });
+            const refreshToken = signRefresh({ id: user._id, role: user.role });
             user.refreshToken = refreshToken;
             await user.save();
 
-            res.json({ success: true, accessToken, refreshToken, user: { id: user._id, email: user.email, role: user.role } });
+            res.json({
+                success: true,
+                needsPassword: isNew,
+                accessToken,
+                refreshToken,
+                user: { id: user._id, email: user.email, role: user.role },
+            });
         } catch (err) {
             console.error("verify-otp error:", err.message);
+            res.status(500).json({ success: false, message: err.message });
+        }
+    }
+);
+
+router.post("/set-password",
+    [body("password").isLength({ min: 6 }).withMessage("Минимум 6 символов")],
+    validate,
+    auth,
+    async (req, res) => {
+        try {
+            const user = await User.findById(req.user.id);
+            user.password = req.body.password;
+            await user.save();
+            res.json({ success: true, message: "Пароль установлен" });
+        } catch (err) {
             res.status(500).json({ success: false, message: err.message });
         }
     }

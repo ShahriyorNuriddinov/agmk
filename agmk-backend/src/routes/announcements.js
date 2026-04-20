@@ -2,6 +2,8 @@ const router = require("express").Router();
 const Announcement = require("../models/Announcement");
 const { auth, role } = require("../middleware/auth");
 
+
+
 router.get("/", auth, async (req, res) => {
     try {
         const announcements = await Announcement.find({ isPublished: true })
@@ -19,6 +21,10 @@ router.get("/", auth, async (req, res) => {
     }
 });
 
+
+
+
+
 router.post("/", auth, role("hr", "manager", "admin"), async (req, res) => {
     try {
         const ann = await Announcement.create({ ...req.body, author: req.user.id });
@@ -27,6 +33,10 @@ router.post("/", auth, role("hr", "manager", "admin"), async (req, res) => {
         res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
     }
 });
+
+
+
+
 
 router.put("/:id/read", auth, async (req, res) => {
     try {

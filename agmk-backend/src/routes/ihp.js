@@ -2,6 +2,8 @@ const router = require("express").Router();
 const IhpRequest = require("../models/IhpRequest");
 const { auth, role } = require("../middleware/auth");
 
+
+
 router.get("/", auth, async (req, res) => {
     try {
         const requests = await IhpRequest.find({ user: req.user.id }).sort({ createdAt: -1 });
@@ -10,6 +12,9 @@ router.get("/", auth, async (req, res) => {
         res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
     }
 });
+
+
+
 
 router.get("/all", auth, role("hr", "admin"), async (req, res) => {
     try {
@@ -20,6 +25,9 @@ router.get("/all", auth, role("hr", "admin"), async (req, res) => {
     }
 });
 
+
+
+
 router.post("/", auth, async (req, res) => {
     try {
         const request = await IhpRequest.create({ ...req.body, user: req.user.id });
@@ -28,6 +36,9 @@ router.post("/", auth, async (req, res) => {
         res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
     }
 });
+
+
+
 
 router.get("/:id", auth, async (req, res) => {
     try {
@@ -38,6 +49,9 @@ router.get("/:id", auth, async (req, res) => {
         res.status(500).json({ success: false, message: "Внутренняя ошибка сервера" });
     }
 });
+
+
+
 
 router.put("/:id/status", auth, role("hr", "admin"), async (req, res) => {
     try {

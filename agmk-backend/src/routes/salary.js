@@ -3,7 +3,8 @@ const Salary = require("../models/Salary");
 const User = require("../models/User");
 const { auth, role } = require("../middleware/auth");
 
-// GET /api/salary/me — joriy foydalanuvchining ish haqi tarixi
+
+
 router.get("/me", auth, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
@@ -14,7 +15,9 @@ router.get("/me", auth, async (req, res) => {
     }
 });
 
-// GET /api/salary/me/current — joriy oy
+
+
+
 router.get("/me/current", auth, async (req, res) => {
     try {
         const now = new Date();
@@ -30,7 +33,11 @@ router.get("/me/current", auth, async (req, res) => {
     }
 });
 
-// POST /api/salary — yangi ish haqi qo'shish (hr/admin)
+
+
+
+
+
 router.post("/", auth, role("hr", "admin"), async (req, res) => {
     try {
         const { employeeId, month, year, baseSalary, items } = req.body;
@@ -47,7 +54,8 @@ router.post("/", auth, role("hr", "admin"), async (req, res) => {
     }
 });
 
-// PUT /api/salary/:id — yangilash (hr/admin)
+
+
 router.put("/:id", auth, role("hr", "admin"), async (req, res) => {
     try {
         const salary = await Salary.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
