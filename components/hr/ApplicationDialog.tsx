@@ -49,6 +49,7 @@ const schema = z.object({
         const min = new Date("2019-01-01");
         const max = new Date("2023-12-31");
         return d >= min && d <= max;
+
       },
       {
         message: "Дата должна быть с 2019 по 2023 год",
