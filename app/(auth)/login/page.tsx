@@ -27,19 +27,27 @@ const codeSchema = z.object({
 });
 type CodeForm = z.infer<typeof codeSchema>;
 
+const setPassSchema = z.object({
+    password: z.string().min(6, "Минимум 6 символов"),
+    confirm: z.string().min(6, "Минимум 6 символов"),
+}).refine((d) => d.password === d.confirm, { message: "Пароли не совпадают", path: ["confirm"] });
+type SetPassForm = z.infer<typeof setPassSchema>;
+
 export default function LoginPage() {
     const [tab, setTab] = useState<"password" | "otp">("password");
     const [showPass, setShowPass] = useState(false);
-    const [otpStep, setOtpStep] = useState<"email" | "code">("email");
+    const [otpStep, setOtpStep] = useState<"email" | "code" | "setpass">("email");
     const [otpEmail, setOtpEmail] = useState("");
     const [otpLoading, setOtpLoading] = useState(false);
     const [otpError, setOtpError] = useState("");
+    const [otpAccessToken, setOtpAccessToken] = useState("");
     const { mutate, isPending } = useLogin();
     const router = useRouter();
 
     const passForm = useForm<PassForm>({ resolver: zodResolver(passSchema) });
     const emailForm = useForm<EmailForm>({ resolver: zodResolver(emailSchema) });
     const codeForm = useForm<CodeForm>({ resolver: zodResolver(codeSchema) });
+    const setPassForm = useForm<SetPassForm>({ resolver: zodResolver(setPassSchema) });
 
     async function sendOtp(data: EmailForm) {
         setOtpLoading(true);
@@ -61,14 +69,30 @@ export default function LoginPage() {
         setOtpError("");
         try {
             const res = await axios.post(`${API}/auth/verify-otp`, { email: otpEmail, code: data.code });
-            const { accessToken, refreshToken, user } = res.data;
-            localStorage.setItem("accessToken", accessToken);
-            localStorage.setItem("refreshToken", refreshToken);
-            localStorage.setItem("user", JSON.stringify(user));
-            router.push("/");
+            setOtpAccessToken(res.data.accessToken);
+            localStorage.setItem("refreshToken", res.data.refreshToken);
+            localStorage.setItem("user", JSON.stringify(res.data.user));
+            setOtpStep("setpass");
         } catch (e: unknown) {
             const msg = axios.isAxiosError(e) ? e.response?.data?.message : "Ошибка";
             setOtpError(msg || "Неверный код");
+        } finally {
+            setOtpLoading(false);
+        }
+    }
+
+    async function savePassword(data: SetPassForm) {
+        setOtpLoading(true);
+        setOtpError("");
+        try {
+            await axios.post(`${API}/auth/set-password`, { password: data.password }, {
+                headers: { Authorization: `Bearer ${otpAccessToken}` },
+            });
+            localStorage.setItem("accessToken", otpAccessToken);
+            router.push("/");
+        } catch (e: unknown) {
+            const msg = axios.isAxiosError(e) ? e.response?.data?.message : "Ошибка";
+            setOtpError(msg || "Ошибка при сохранении пароля");
         } finally {
             setOtpLoading(false);
         }
@@ -166,11 +190,37 @@ export default function LoginPage() {
                             <button type="submit" disabled={otpLoading}
                                 className="w-full bg-primary text-primary-foreground rounded-md h-10 text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-60">
                                 {otpLoading ? <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <LogIn className="h-4 w-4" />}
-                                {otpLoading ? "Проверяем..." : "Войти"}
+                                {otpLoading ? "Проверяем..." : "Далее"}
                             </button>
                             <button type="button" onClick={() => { setOtpStep("email"); setOtpError(""); codeForm.reset(); }}
                                 className="w-full text-sm text-muted-foreground hover:text-foreground">
                                 ← Изменить email
+                            </button>
+                        </form>
+                    )}
+
+                    {tab === "otp" && otpStep === "setpass" && (
+                        <form onSubmit={setPassForm.handleSubmit(savePassword)} className="space-y-4">
+                            <p className="text-sm text-muted-foreground">Установите пароль для входа</p>
+                            <div>
+                                <label className="text-sm font-medium block mb-1.5" htmlFor="new-pass">Пароль</label>
+                                <input id="new-pass" type="password" placeholder="Минимум 6 символов"
+                                    {...setPassForm.register("password")}
+                                    className="w-full border rounded-md px-3 h-10 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition" />
+                                {setPassForm.formState.errors.password && <p className="text-xs text-destructive mt-1">{setPassForm.formState.errors.password.message}</p>}
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium block mb-1.5" htmlFor="confirm-pass">Повторите пароль</label>
+                                <input id="confirm-pass" type="password" placeholder="••••••••"
+                                    {...setPassForm.register("confirm")}
+                                    className="w-full border rounded-md px-3 h-10 text-sm outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition" />
+                                {setPassForm.formState.errors.confirm && <p className="text-xs text-destructive mt-1">{setPassForm.formState.errors.confirm.message}</p>}
+                            </div>
+                            {otpError && <p className="text-xs text-destructive">{otpError}</p>}
+                            <button type="submit" disabled={otpLoading}
+                                className="w-full bg-primary text-primary-foreground rounded-md h-10 text-sm font-medium flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-60">
+                                {otpLoading ? <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <LogIn className="h-4 w-4" />}
+                                {otpLoading ? "Сохраняем..." : "Войти"}
                             </button>
                         </form>
                     )}
