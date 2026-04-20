@@ -10,6 +10,7 @@ const ihpRoutes = require("./routes/ihp");
 const foodVoucherRoutes = require("./routes/foodVouchers");
 const supportRoutes = require("./routes/support");
 const announcementRoutes = require("./routes/announcements");
+const salaryRoutes = require("./routes/salary");
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use("/api/ihp", ihpRoutes);
 app.use("/api/food-vouchers", foodVoucherRoutes);
 app.use("/api/support", supportRoutes);
 app.use("/api/announcements", announcementRoutes);
+app.use("/api/salary", salaryRoutes);
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
