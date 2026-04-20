@@ -22,9 +22,11 @@ export default function LoginPage() {
         resolver: zodResolver(schema),
     });
 
+
     return (
         <div className="min-h-screen bg-accent/30 flex items-center justify-center p-4">
             <div className="w-full max-w-md">
+
                 <div className="text-center mb-8">
                     <Link href="/" className="inline-flex items-center space-x-3">
                         <Building2 className="h-10 w-10 text-primary" aria-hidden />

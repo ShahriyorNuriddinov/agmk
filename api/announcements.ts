@@ -10,4 +10,5 @@ export const announcementsApi = {
         const res = await api.put(`/announcements/${id}/read`);
         return res.data;
     },
+    
 };
