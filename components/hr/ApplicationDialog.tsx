@@ -23,22 +23,10 @@ import {
 } from "@/components/ui/select";
 import { useCreateKindergarten } from "@/hooks/useKindergarten";
 
-/* ---------------- VALIDATION ---------------- */
 
 const nameRegex = /^[A-Za-zА-Яа-яЁё\s]+$/;
 
 const schema = z.object({
-  childFirstName: z
-    .string()
-    .min(1, "Введите имя ребенка")
-    .max(30, "Максимум 30 символов")
-    .regex(nameRegex, "Только буквы"),
-
-  childLastName: z
-    .string()
-    .min(1, "Введите фамилию ребенка")
-    .max(30, "Максимум 30 символов")
-    .regex(nameRegex, "Только буквы"),
 
   childBirthDate: z
     .string()
@@ -49,7 +37,6 @@ const schema = z.object({
         const min = new Date("2019-01-01");
         const max = new Date("2023-12-31");
         return d >= min && d <= max;
-
       },
       {
         message: "Дата должна быть с 2019 по 2023 год",
